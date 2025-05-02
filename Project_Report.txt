@@ -1,0 +1,123 @@
+# Longest Common Substring Algorithms Project Report
+
+## Introduction
+
+This project explores and compares two algorithmic solutions for the Longest Common Substring (LCS) problem: a brute-force approach and a dynamic programming approach. The LCS problem involves finding the longest substring that appears in two given strings. This is a fundamental problem in string processing with applications in bioinformatics, text analysis, and data compression.
+
+The brute-force algorithm systematically examines all possible substrings, suffering from high computational cost as input size increases. In contrast, the dynamic programming solution offers significantly better time efficiency by storing and reusing intermediate results.
+
+## Algorithms and Complexity Analysis
+
+### Brute Force Approach
+
+#### Pseudocode:
+```
+Function BRUTE_FORCE_LCS(string str1, string str2)
+    if str1 is empty or str2 is empty then
+        return "", 0
+    
+    longest = ""
+    max_length = 0
+    
+    for i = 0 to length(str1) - 1 do
+        for j = i + 1 to length(str1) do
+            substring = str1[i:j]
+            if length(substring) > max_length AND substring is in str2 then
+                max_length = length(substring)
+                longest = substring
+    
+    return longest, max_length
+```
+
+#### Complexity Analysis:
+- Time Complexity: O(n²m)
+  - Generating all possible substrings of str1 takes O(n²) operations, where n is the length of str1
+  - For each substring, checking if it exists in str2 takes O(m) operations in the worst case, where m is the length of str2
+  - Therefore, the overall time complexity is O(n²m)
+
+- Space Complexity: O(n)
+  - We need to store each substring, which in the worst case is O(n)
+
+### Dynamic Programming Approach
+
+#### Pseudocode:
+```
+Function DP_LCS(string str1, string str2)
+    if str1 is empty or str2 is empty then
+        return "", 0
+    
+    m = length(str1)
+    n = length(str2)
+    dp = create 2D array of size (m+1) × (n+1) initialized with zeros
+    
+    max_length = 0
+    end_index = 0
+    
+    for i = 1 to m do
+        for j = 1 to n do
+            if str1[i-1] equals str2[j-1] then
+                dp[i][j] = dp[i-1][j-1] + 1
+                if dp[i][j] > max_length then
+                    max_length = dp[i][j]
+                    end_index = i
+            else
+                dp[i][j] = 0
+    
+    if max_length equals 0 then
+        return "", 0
+    
+    start_index = end_index - max_length
+    longest = str1[start_index:end_index]
+    
+    return longest, max_length
+```
+
+#### Complexity Analysis:
+- Time Complexity: O(nm)
+  - We fill a 2D table of size (m+1) × (n+1), where each cell computation takes O(1) time
+  - Therefore, the overall time complexity is O(nm)
+
+- Space Complexity: O(nm)
+  - We need to store the entire DP table of size (m+1) × (n+1)
+
+## Performance Analysis
+
+Our implementation tested both algorithms using random strings of varying lengths. We systematically varied string lengths from 10 to 500 characters, with multiple random strings generated for each size combination.
+
+The performance analysis focused on:
+1. Measuring execution time for both algorithms
+2. Calculating the speedup of the dynamic programming approach over the brute-force approach
+3. Comparing theoretical complexity with experimental results
+
+### Experimental Results
+
+The results are visualized in three key figures:
+
+1. **Runtime Comparison**: Shows how execution time increases with input size for both algorithms. The brute-force approach shows a steeper curve, confirming its higher time complexity.
+
+2. **Speedup Visualization**: Illustrates the performance advantage of dynamic programming over brute force. The speedup factor grows significantly as input size increases, demonstrating the practical superiority of the DP approach.
+
+3. **Theoretical vs. Experimental Complexity**: Compares the measured execution times with theoretical complexity models. This visualization confirms that the empirical results closely follow the theoretical complexity bounds, with O(n²m) for brute force and O(nm) for dynamic programming.
+
+## Bonus Visualization Component
+
+We developed an interactive visualization that demonstrates how the dynamic programming table is built step by step. This component:
+
+- Displays the DP table updates in real-time with a web-based interface
+- Highlights the current cell being processed and the path leading to the longest common substring
+- Allows users to input custom strings and navigate through each step of the algorithm
+- Is packaged as a standalone executable with comprehensive instructions
+
+The visualization helps in understanding the dynamic programming approach and how it efficiently solves the LCS problem by building up the solution from smaller subproblems.
+
+## Conclusion
+
+Our comprehensive analysis of the Longest Common Substring problem demonstrates the clear advantage of the dynamic programming approach over the brute-force method. The experimental results align with theoretical complexity analysis, showing that:
+
+1. The brute-force algorithm becomes impractical for larger inputs due to its O(n²m) time complexity
+2. The dynamic programming solution maintains good performance even for larger inputs with its O(nm) time complexity
+3. The performance gap between the two approaches widens as input size increases
+
+The interactive visualization component enhances understanding of the DP approach by illustrating the table-building process step by step.
+
+In real-world applications where string lengths can be substantial, the dynamic programming approach would be the clear choice for solving the LCS problem efficiently.
