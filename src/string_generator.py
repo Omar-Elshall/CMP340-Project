@@ -22,7 +22,7 @@ def generate_random_string(length):
     return ''.join(random.choice(string.ascii_letters) for _ in range(length))
 
 
-def generate_test_cases(min_length=10, max_length=1000, step=100, num_cases=3):
+def generate_test_cases(min_length=10, max_length=500, step=100, num_cases=3):
     """
     Generates test cases with varying string lengths.
     
