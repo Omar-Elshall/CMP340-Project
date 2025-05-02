@@ -4,7 +4,7 @@ Simple web-based DP Table Visualizer
 """
 
 import numpy as np
-from src.lcs_algorithms import dp_lcs
+from lcs_algorithms import dp_lcs
 import os
 import webbrowser
 import http.server
