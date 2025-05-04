@@ -1,43 +1,53 @@
 #!/usr/bin/env python3
 """
-Longest Common Substring Algorithms
+Longest Common Subsequence Algorithms
 This module implements both brute-force and dynamic programming solutions
-for finding the longest common substring between two strings.
+for finding the longest common subsequence between two strings.
 """
+
+import itertools
+
+def is_subsequence(subseq, string):
+    """Check if subseq is a subsequence of string"""
+    it = iter(string)
+    return all(c in it for c in subseq)
 
 def brute_force_lcs(str1, str2):
     """
-    Finds the longest common substring between two strings using brute force.
-    Time Complexity: O(n²m) where n is the length of str1 and m is the length of str2.
+    Finds the longest common subsequence between two strings using brute force.
+    Time Complexity: O(2^n) where n is the length of the first string.
     
     Args:
         str1 (str): First input string
         str2 (str): Second input string
         
     Returns:
-        tuple: (longest common substring, length of substring)
+        tuple: (longest common subsequence, length of subsequence)
     """
     if not str1 or not str2:
         return "", 0
-        
-    longest = ""
-    max_length = 0
     
-    # Check all possible substrings of str1
-    for i in range(len(str1)):
-        for j in range(i + 1, len(str1) + 1):
-            substring = str1[i:j]
-            # If this substring is longer than our current longest and exists in str2
-            if len(substring) > max_length and substring in str2:
-                max_length = len(substring)
-                longest = substring
+    # Swap strings if the first one is longer (optimization)
+    if len(str1) > len(str2):
+        str1, str2 = str2, str1
     
-    return longest, max_length
+    # Start with the longest possible subsequence length
+    for length in range(min(len(str1), len(str2)), 0, -1):
+        # For each possible subsequence of this length from str1
+        for indices in itertools.combinations(range(len(str1)), length):
+            # Extract the subsequence
+            subsequence = ''.join(str1[i] for i in indices)
+            
+            # Check if it's a subsequence of str2
+            if is_subsequence(subsequence, str2):
+                return subsequence, length
+    
+    return "", 0
 
 
 def dp_lcs(str1, str2):
     """
-    Finds the longest common substring between two strings using dynamic programming.
+    Finds the longest common subsequence between two strings using dynamic programming.
     Time Complexity: O(nm) where n and m are the lengths of the strings.
     
     Args:
@@ -45,7 +55,7 @@ def dp_lcs(str1, str2):
         str2 (str): Second input string
         
     Returns:
-        tuple: (longest common substring, length of substring)
+        tuple: (longest common subsequence, length of subsequence)
     """
     if not str1 or not str2:
         return "", 0
@@ -54,29 +64,31 @@ def dp_lcs(str1, str2):
     m, n = len(str1), len(str2)
     dp = [[0 for _ in range(n + 1)] for _ in range(m + 1)]
     
-    # Variables to store result
-    max_length = 0
-    end_index = 0
-    
     # Fill the dp table
     for i in range(1, m + 1):
         for j in range(1, n + 1):
             if str1[i-1] == str2[j-1]:
                 dp[i][j] = dp[i-1][j-1] + 1
-                if dp[i][j] > max_length:
-                    max_length = dp[i][j]
-                    end_index = i
             else:
-                dp[i][j] = 0
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1])
     
-    # Extract the longest common substring
-    if max_length == 0:
-        return "", 0
-        
-    start_index = end_index - max_length
-    longest = str1[start_index:end_index]
+    # Backtrack to find the LCS
+    i, j = m, n
+    lcs = []
     
-    return longest, max_length
+    while i > 0 and j > 0:
+        if str1[i-1] == str2[j-1]:
+            lcs.append(str1[i-1])
+            i -= 1
+            j -= 1
+        elif dp[i-1][j] > dp[i][j-1]:
+            i -= 1
+        else:
+            j -= 1
+    
+    # Reverse the LCS (we built it backwards)
+    lcs = ''.join(reversed(lcs))
+    return lcs, len(lcs)
 
 
 def get_dp_table(str1, str2):
@@ -102,6 +114,23 @@ def get_dp_table(str1, str2):
             if str1[i-1] == str2[j-1]:
                 dp[i][j] = dp[i-1][j-1] + 1
             else:
-                dp[i][j] = 0
+                dp[i][j] = max(dp[i-1][j], dp[i][j-1])
     
     return dp
+
+
+if __name__ == "__main__":
+    # Example usage
+    str1 = "ABCBDAB"
+    str2 = "BDCABA"
+    
+    print(f"String 1: {str1}")
+    print(f"String 2: {str2}")
+    
+    # Brute force approach
+    bf_result, bf_length = brute_force_lcs(str1, str2)
+    print(f"Brute Force LCS: {bf_result} (length: {bf_length})")
+    
+    # Dynamic programming approach
+    dp_result, dp_length = dp_lcs(str1, str2)
+    print(f"DP LCS: {dp_result} (length: {dp_length})")

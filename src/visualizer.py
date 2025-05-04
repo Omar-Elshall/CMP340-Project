@@ -13,6 +13,7 @@ import seaborn as sns
 def plot_performance_comparison(results_df, output_dir='figures'):
     """
     Creates basic performance comparison plots from test results.
+    Only includes data points where both algorithms successfully completed.
     
     Args:
         results_df (pd.DataFrame): DataFrame containing test results
@@ -27,32 +28,25 @@ def plot_performance_comparison(results_df, output_dir='figures'):
     # Set the style
     sns.set(style="whitegrid", font_scale=1.2)
     
-    # 1. Runtime vs Product Length (simple comparison)
+    # Filter for tests where both algorithms completed
+    complete_df = results_df[results_df['brute_force_time'].notna() & results_df['dp_time'].notna()].copy()
+    
+    # Calculate total test count and complete test count
+    total_tests = len(results_df)
+    complete_tests = len(complete_df)
+    
+    # 1. Runtime Comparison Plot
     plt.figure(figsize=(10, 6))
     
-    # Filter out infinite values (skipped tests)
-    filtered_df = results_df[results_df['brute_force_time'] != float('inf')]
+    # Add title with completion info
+    plt.title(f'Runtime Comparison: Brute Force vs Dynamic Programming\n'
+              f'({complete_tests} of {total_tests} tests have results from both algorithms)')
     
-    # Create scatter plot with trend lines
-    plt.scatter(filtered_df['product_length'], filtered_df['brute_force_time'], 
+    plt.scatter(complete_df['product_length'], complete_df['brute_force_time'], 
                 label='Brute Force', marker='o', alpha=0.7)
-    plt.scatter(filtered_df['product_length'], filtered_df['dp_time'], 
+    plt.scatter(complete_df['product_length'], complete_df['dp_time'], 
                 label='Dynamic Programming', marker='x', alpha=0.7)
     
-    # Add trend lines
-    bf_z = np.polyfit(filtered_df['product_length'], filtered_df['brute_force_time'], 1)
-    bf_p = np.poly1d(bf_z)
-    
-    dp_z = np.polyfit(filtered_df['product_length'], filtered_df['dp_time'], 1)
-    dp_p = np.poly1d(dp_z)
-    
-    # Get x values for plotting the fitted functions
-    x_range = np.linspace(filtered_df['product_length'].min(), filtered_df['product_length'].max(), 100)
-    
-    plt.plot(x_range, bf_p(x_range), "--", color='blue')
-    plt.plot(x_range, dp_p(x_range), "--", color='orange')
-    
-    plt.title('Runtime Comparison: Brute Force vs Dynamic Programming')
     plt.xlabel('Product of String Lengths (len1 × len2)')
     plt.ylabel('Runtime (seconds)')
     plt.legend()
@@ -63,78 +57,93 @@ def plot_performance_comparison(results_df, output_dir='figures'):
     plot_files.append(plot_path)
     plt.close()
     
-    # 2. Speedup Visualization with improved x-axis
+    # 2. Speedup Scatter Plot
     plt.figure(figsize=(10, 6))
     
-    # Sort by product length for clearer visualization
-    sorted_df = filtered_df.sort_values('product_length')
+    # Sort by product length
+    sorted_df = complete_df.sort_values('product_length').copy()
+    sorted_df['speedup'] = sorted_df['brute_force_time'] / sorted_df['dp_time']
     
-    # Create indices for the bars
-    indices = range(len(sorted_df))
+    # Create scatter plot showing speedup vs product length (just points, no lines)
+    plt.scatter(sorted_df['product_length'], sorted_df['speedup'], 
+                s=50, alpha=0.7, marker='o', edgecolors='k', linewidths=0.5)
     
-    # Plot speedup
-    bars = plt.bar(indices, sorted_df['speedup'])
+    # Add a horizontal grid for better readability of values
+    plt.grid(True, axis='y', linestyle='--', alpha=0.7)
     
-    # Improve x-axis labels
-    # Only show a subset of the x-tick labels to avoid crowding
-    if len(sorted_df) > 10:
-        # Show approximately 10 labels evenly spaced
-        step = max(1, len(sorted_df) // 10)
-        plt.xticks(
-            indices[::step], 
-            sorted_df['product_length'].iloc[::step], 
-            rotation=30, 
-            ha='right'
-        )
-    else:
-        plt.xticks(indices, sorted_df['product_length'], rotation=30, ha='right')
+    # Label the most significant points on the graph
+    max_idx = sorted_df['speedup'].idxmax()
+    min_idx = sorted_df['speedup'].idxmin()
     
-    # Add value labels on top of bars
-    for i, bar in enumerate(bars):
-        height = bar.get_height()
-        plt.text(
-            bar.get_x() + bar.get_width()/2.,
-            height + 0.1,
-            f'{height:.1f}',
-            ha='center', 
-            va='bottom',
-            fontsize=8
-        )
+    # Label max point
+    max_product = sorted_df.loc[max_idx, 'product_length']
+    max_speedup = sorted_df.loc[max_idx, 'speedup']
+    plt.annotate(f'Max: {max_speedup:.1f}x', 
+                xy=(max_product, max_speedup),
+                xytext=(0, 10),
+                textcoords='offset points',
+                ha='center', va='bottom',
+                fontweight='bold')
     
-    plt.title('Speedup of Dynamic Programming over Brute Force')
+    # Label min point
+    min_product = sorted_df.loc[min_idx, 'product_length']
+    min_speedup = sorted_df.loc[min_idx, 'speedup']
+    plt.annotate(f'Min: {min_speedup:.1f}x', 
+                xy=(min_product, min_speedup),
+                xytext=(0, -15),
+                textcoords='offset points',
+                ha='center', va='top')
+    
+    # Add median line
+    median_speedup = sorted_df['speedup'].median()
+    plt.axhline(y=median_speedup, color='green', linestyle='--', alpha=0.5)
+    plt.annotate(f'Median: {median_speedup:.1f}x', 
+                xy=(sorted_df['product_length'].max(), median_speedup),
+                xytext=(-10, 0),
+                textcoords='offset points',
+                ha='right', va='center',
+                color='green')
+    
+    plt.title(f'Speedup of Dynamic Programming over Brute Force\n'
+              f'(Based on {complete_tests} tests with both algorithms)')
     plt.xlabel('Product of String Lengths (len1 × len2)')
-    plt.ylabel('Speedup Factor (Brute Force Time / DP Time)')
-    plt.grid(True, axis='y')
-    plt.tight_layout()  # Ensure all labels fit within the figure
+    plt.ylabel('Speedup Factor (BF time / DP time)')
+    
+    # Format the x-axis to avoid overcrowding of labels
+    if len(sorted_df) > 20:
+        plt.locator_params(axis='x', nbins=10)
+    
+    plt.tight_layout()
     
     plot_path = os.path.join(output_dir, 'speedup.png')
     plt.savefig(plot_path)
     plot_files.append(plot_path)
     plt.close()
     
-    # 3. Theoretical vs Experimental Complexity
+    # 3. Theoretical vs Experimental
     plt.figure(figsize=(10, 6))
     
-    # For brute force, theoretical complexity is O(n^2 * m)
-    # For DP, theoretical complexity is O(n * m)
-    sorted_df['bf_theoretical'] = sorted_df['str1_length']**2 * sorted_df['str2_length'] / 1e9
+    # Theoretical model
+    # For DP: O(n*m) 
+    # For BF: O(2^(n+m))
+    sorted_df['bf_theoretical'] = np.power(2, sorted_df['str1_length'] + sorted_df['str2_length']) / 1e12
     sorted_df['dp_theoretical'] = sorted_df['str1_length'] * sorted_df['str2_length'] / 1e6
     
-    # Scale the theoretical curves
+    # Scale factors
     bf_scale = sorted_df['brute_force_time'].mean() / sorted_df['bf_theoretical'].mean()
     dp_scale = sorted_df['dp_time'].mean() / sorted_df['dp_theoretical'].mean()
     
-    sorted_df['bf_theoretical'] *= bf_scale
-    sorted_df['dp_theoretical'] *= dp_scale
+    sorted_df['bf_theoretical'] = sorted_df['bf_theoretical'] * bf_scale
+    sorted_df['dp_theoretical'] = sorted_df['dp_theoretical'] * dp_scale
     
     plt.scatter(sorted_df['product_length'], sorted_df['brute_force_time'], 
-               label='BF Experimental', marker='o')
+                label='BF Experimental', marker='o')
     plt.scatter(sorted_df['product_length'], sorted_df['bf_theoretical'], 
-               label='BF Theoretical O(n²m)', marker='+')
+                label='BF Theoretical O(2^(n+m))', marker='+')
     plt.scatter(sorted_df['product_length'], sorted_df['dp_time'], 
-               label='DP Experimental', marker='x')
+                label='DP Experimental', marker='x')
     plt.scatter(sorted_df['product_length'], sorted_df['dp_theoretical'], 
-               label='DP Theoretical O(nm)', marker='*')
+                label='DP Theoretical O(nm)', marker='*')
     
     plt.title('Theoretical vs Experimental Complexity')
     plt.xlabel('Product of String Lengths')
@@ -146,6 +155,7 @@ def plot_performance_comparison(results_df, output_dir='figures'):
     plt.savefig(plot_path)
     plot_files.append(plot_path)
     plt.close()
+    
     
     return plot_files
 
@@ -175,7 +185,7 @@ def visualize_dp_table(str1, str2):
     # Add labels
     ax.set_xlabel(f"String 2: '{str2}'")
     ax.set_ylabel(f"String 1: '{str1}'")
-    ax.set_title("Dynamic Programming Table for Longest Common Substring")
+    ax.set_title("Dynamic Programming Table for Longest Common Subsequence")
     
     # Add string characters as labels
     x_labels = [''] + list(str2)

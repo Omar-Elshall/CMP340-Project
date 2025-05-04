@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """
-Simple web-based DP Table Visualizer
+Web-based DP Table Visualizer for Longest Common Subsequence
 """
 
 import numpy as np
-from lcs_algorithms import dp_lcs
+try:
+    from src.lcs_algorithms import dp_lcs
+except ImportError:
+    from lcs_algorithms import dp_lcs
 import os
 import webbrowser
 import http.server
@@ -38,7 +41,7 @@ HTML = """
 </head>
 <body>
     <div class="container">
-        <h1>Longest Common Substring Visualizer</h1>
+        <h1>Longest Common Subsequence Visualizer</h1>
         
         <form method="post" action="/">
             <div>
@@ -96,44 +99,57 @@ class DPState:
             'i': None, 'j': None,
             'description': "Initial DP table (all cells set to 0)",
             'max_length': 0,
-            'end_pos': (0, 0)
+            'lcs_path': []
         })
         
         # Fill the DP table step by step
-        max_length = 0
-        end_pos = (0, 0)
-        
         for i in range(1, m + 1):
             for j in range(1, n + 1):
                 if self.str1[i-1] == self.str2[j-1]:
                     # Characters match
                     dp[i, j] = dp[i-1, j-1] + 1
-                    
-                    if dp[i, j] > max_length:
-                        max_length = dp[i, j]
-                        end_pos = (i, j)
-                        desc = f"Match: '{self.str1[i-1]}' at DP[{i},{j}] = {dp[i,j]}<br>New longest substring found!"
-                    else:
-                        desc = f"Match: '{self.str1[i-1]}' at DP[{i},{j}] = {dp[i,j]}"
+                    desc = f"Match: '{self.str1[i-1]}' at DP[{i},{j}] = {dp[i,j]} (diagonal + 1)"
                 else:
-                    # No match
-                    dp[i, j] = 0
-                    desc = f"No match: '{self.str1[i-1]}' ≠ '{self.str2[j-1]}' at DP[{i},{j}] = 0"
+                    # No match, take max of left or top cell
+                    dp[i, j] = max(dp[i-1, j], dp[i, j-1])
+                    if dp[i-1, j] >= dp[i, j-1]:
+                        desc = f"No match: DP[{i},{j}] = {dp[i,j]} (from top cell)"
+                    else:
+                        desc = f"No match: DP[{i},{j}] = {dp[i,j]} (from left cell)"
                 
                 # Save step
                 steps.append({
                     'dp': dp.copy(),
                     'i': i, 'j': j,
                     'description': desc,
-                    'max_length': max_length,
-                    'end_pos': end_pos
+                    'max_length': dp[m, n],  # The max length is always in the bottom-right
+                    'lcs_path': []  # Will be calculated in the final step
                 })
         
-        # Final step description
+        # Calculate the LCS path for the final state
         if steps[-1]['max_length'] > 0:
-            i, j = steps[-1]['end_pos']
-            start = i - steps[-1]['max_length']
-            lcs = self.str1[start:i]
+            # Backtrack to find the LCS path
+            i, j = m, n
+            path_cells = []
+            lcs_chars = []
+            
+            while i > 0 and j > 0:
+                if self.str1[i-1] == self.str2[j-1]:
+                    path_cells.append((i, j))
+                    lcs_chars.append(self.str1[i-1])
+                    i -= 1
+                    j -= 1
+                elif dp[i-1, j] > dp[i, j-1]:
+                    i -= 1
+                else:
+                    j -= 1
+            
+            # Reverse the path (we built it backwards)
+            path_cells.reverse()
+            lcs_chars.reverse()
+            lcs = ''.join(lcs_chars)
+            
+            steps[-1]['lcs_path'] = path_cells
             steps[-1]['description'] += f"<br>Final result: '{lcs}' (length: {steps[-1]['max_length']})"
         
         return steps
@@ -150,7 +166,7 @@ class DPState:
 
 
 class WebVisualizer(http.server.SimpleHTTPRequestHandler):
-    """Simple HTTP handler for DP visualization"""
+    """HTTP handler for DP visualization"""
     
     # Class variable to store current state
     dp_state = None
@@ -216,7 +232,7 @@ class WebVisualizer(http.server.SimpleHTTPRequestHandler):
         # Run the algorithm for the result
         if step_idx == 0:
             lcs, length = dp_lcs(str1, str2)
-            result = f"<div style='margin-top: 15px;'><b>Longest Common Substring:</b> '{lcs}' (length: {length})</div>"
+            result = f"<div style='margin-top: 15px;'><b>Longest Common Subsequence:</b> '{lcs}' (length: {length})</div>"
         else:
             result = ""
         
@@ -292,13 +308,7 @@ class WebVisualizer(http.server.SimpleHTTPRequestHandler):
                 if i_idx == i and j_idx == j:
                     cell_class = "current"
                 # Cell in LCS path
-                elif (step['max_length'] > 0 and
-                      i_idx > 0 and j_idx > 0 and
-                      dp[i_idx, j_idx] > 0 and
-                      i_idx <= step['end_pos'][0] and
-                      j_idx <= step['end_pos'][1] and
-                      i_idx > step['end_pos'][0] - step['max_length'] and
-                      j_idx > step['end_pos'][1] - step['max_length']):
+                elif (i_idx, j_idx) in step['lcs_path']:
                     cell_class = "lcs-path"
                 
                 row.append(f"<td class='{cell_class}'>{int(dp[i_idx, j_idx])}</td>")
@@ -340,7 +350,7 @@ def start_server(port=8000):
 
 
 if __name__ == "__main__":
-    print("Starting Longest Common Substring Visualizer...")
+    print("Starting Longest Common Subsequence Visualizer...")
     # Try to handle the case when running this file directly
     try:
         start_server()

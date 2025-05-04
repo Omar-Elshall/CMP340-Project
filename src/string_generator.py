@@ -19,16 +19,16 @@ def generate_random_string(length):
     Returns:
         str: Random string containing only English letters
     """
-    return ''.join(random.choice(string.ascii_letters) for _ in range(length))
+    return ''.join(random.choice(string.ascii_uppercase) for _ in range(length))
 
 
-def generate_test_cases(min_length=10, max_length=500, step=100, num_cases=3):
+def generate_test_cases(min_length=10, max_length=1000, step=100, num_cases=3):
     """
-    Generates test cases with varying string lengths.
+    Generates test cases with varying string lengths according to the project requirements.
     
     Args:
-        min_length (int): Minimum string length
-        max_length (int): Maximum string length
+        min_length (int): Minimum string length (default 10 per requirements)
+        max_length (int): Maximum string length (default 1000 per requirements)
         step (int): Step size for increasing string length
         num_cases (int): Number of test cases per size combination
         
@@ -93,3 +93,10 @@ def load_test_cases(filename='data/test_cases.json'):
         test_cases.append((case['str1'], case['str2'], case['len1'], case['len2']))
     
     return test_cases
+
+
+if __name__ == "__main__":
+    # Example usage
+    test_cases = generate_test_cases(min_length=10, max_length=1000, step=150, num_cases=3)
+    save_test_cases(test_cases)
+    print(f"Generated {len(test_cases)} test cases and saved to data/test_cases.json")
